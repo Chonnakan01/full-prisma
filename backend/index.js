@@ -1,33 +1,28 @@
-const express = require('express');
-const cors = require('cors');
-const { swaggerUi, swaggerSpecs } = require('./swagger');
-const cookieParser = require('cookie-parser');
-const apiRouter = require('./routes/api');
-const https = require('https');
-const fs = require('fs');
-const app = express();
+const mysql = require('mysql2');
 
-app.use(express.json());
-app.use(cors({
-    origin: true,
-    credentials: true,
-}));
-
-app.use(cookieParser());
-app.use('/api', apiRouter);
-// app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
-
-const ssl_options = {
-    key : fs.readFileSync('./ssl/key.pem'),
-    cert : fs.readFileSync('./ssl/cert.pem'),
+const dbConfig = {
+    host: "localhost",
+    user: "root",
+    password: "b6521601989",
+    database: "ministore",
+    port: 3307
 };
-const port = 8800;
-const secure_Port = 8443;
 
-app.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
-});
+const pool = mysql.createPool(dbConfig);
 
-https.createServer(ssl_options, app).listen(secure_Port, () => {
-    console.log(`Secure server is running on port ${secure_Port}`);
-});
+function handleDisconnect() {
+    pool.getConnection((err, connection) => {
+        if (err) {
+            console.error("❌ MySQL Connection Failed:", err);
+            setTimeout(handleDisconnect, 2000); // ลองเชื่อมใหม่หลัง 2 วิ
+        } else {
+            console.log("✅ Connected to MySQL Database");
+            // หลังจากเชื่อมต่อสำเร็จ, ต้องปล่อย connection กลับ pool
+            connection.release();
+        }
+    });
+}
+
+handleDisconnect();
+
+module.exports = pool;
